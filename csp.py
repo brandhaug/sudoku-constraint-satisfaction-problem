@@ -115,16 +115,18 @@ class CSP:
             return assignment
         var = self.select_unassigned_variable(assignment)
         for value in self.order_domain_values(var, assignment):
-            if value in assignment:
-                assignment[var] = value
-                inferences = self.inference(var, value)
-                if inferences:
-                    # assignment[var] = value
-
+            assignment = copy.deepcopy(assignment)
+            if self.is_consistent(assignment, var, value):
+                assignment[var] = [value]
+                inferences = self.inference(assignment, self.get_all_neighboring_arcs(var))
+                if inferences: # TODO: always true
+                    # add inferences to assignment
                     result = self.backtrack(assignment)
                     if result:
                         return result
+            # assignment[var].remove(value)
             del assignment[var]
+            # remove inferences from assignment
         return False
 
     def is_assignment_complete(self, assignment):
@@ -147,6 +149,26 @@ class CSP:
                 return domain
         return False
 
+    def select_minimum_remaining_value(self, assignment):
+        """Select the variable with the fewest remaining legal values.
+        Variables with the smallest domain.
+        """
+        minimum_value = {}
+
+        for domain in assignment:
+            if not minimum_value or len(domain) < len(minimum_value):
+                minimum_value = domain
+        return minimum_value
+
+    def is_consistent(self, assignment, var, value):
+        neighbors = self.get_all_neighboring_arcs(var)
+
+        for neighbor in neighbors:
+            neighbor_domains = assignment[neighbor[0]]
+            if len(neighbor_domains) == 1 and value in neighbor_domains:
+                return False
+        return True
+
     def inference(self, assignment, queue):
         """The function 'AC-3' from the pseudocode in the textbook.
         'assignment' is the current partial assignment, that contains
@@ -156,8 +178,8 @@ class CSP:
         while queue:
             i, j = queue.pop(0)
             if self.revise(assignment, i, j):
-                if not assignment:
-                    return False
+                if not assignment[i]:
+                    return False  # inconsistency is found
                 neighbors = self.get_all_neighboring_arcs(i)
                 for k in neighbors:
                     if k[0] != j:
