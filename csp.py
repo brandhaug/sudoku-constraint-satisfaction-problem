@@ -17,6 +17,8 @@ class CSP:
         # the variable pair (i, j)
         self.constraints = {}
 
+        self.backtracks = 0
+
     def add_variable(self, name, domain):
         """Add a new variable to the CSP. 'name' is the variable name
         and 'domain' is a list of the legal values for the variable.
@@ -112,6 +114,8 @@ class CSP:
         iterations of the loop.
         """
 
+        self.backtracks += 1
+
         partial_domain = [e for e in assignment.values() if len(e) != 1]
         if not partial_domain:
             return assignment
@@ -120,8 +124,7 @@ class CSP:
         for value in assignment[var]:
             assignment_copy = copy.deepcopy(assignment)
             assignment_copy[var] = [value]
-            inferences = self.inference(assignment, self.get_all_arcs())
-            # inferences = self.inference(assignment, self.get_all_neighboring_arcs(var))
+            inferences = self.inference(assignment_copy, self.get_all_neighboring_arcs(var))
             if inferences:
                 result = self.backtrack(assignment_copy)
                 if result:
@@ -151,8 +154,8 @@ class CSP:
                 if not assignment[i]:
                     return False  # inconsistency is found
                 for k in self.get_all_neighboring_arcs(i):
-                    # if k[0] != j:
-                    if k[0] not in queue:
+                    # if k[0] not in queue:
+                    if k[0] != j:
                         queue.append((k[0], i))
         return True
 
@@ -240,9 +243,10 @@ def print_sudoku_solution(solution):
 
 
 start = time.time()
-csp = create_sudoku_csp('boards/medium.txt')
-# csp = create_map_coloring_csp()
+csp = create_sudoku_csp('boards/veryhard.txt')
 solution = csp.backtracking_search()
+
+print 'Total backtracks:', csp.backtracks
 
 if solution:
     print_sudoku_solution(solution)
@@ -251,4 +255,4 @@ else:
 
 end = time.time()
 
-print 'Running time: ', (end - start)
+print 'Running time: %.2fs' % (end - start)
