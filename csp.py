@@ -2,6 +2,7 @@
 
 import copy
 import itertools
+import time
 
 
 class CSP:
@@ -111,32 +112,21 @@ class CSP:
         iterations of the loop.
         """
 
-        if self.is_assignment_complete(assignment):
+        partial_domain = [e for e in assignment.values() if len(e) != 1]
+        if not partial_domain:
             return assignment
+
         var = self.select_unassigned_variable(assignment)
-        for value in self.order_domain_values(var, assignment):
-            assignment = copy.deepcopy(assignment)
-            if self.is_consistent(assignment, var, value):
-                assignment[var] = [value]
-                inferences = self.inference(assignment, self.get_all_neighboring_arcs(var))
-                if inferences: # TODO: always true
-                    # add inferences to assignment
-                    result = self.backtrack(assignment)
-                    if result:
-                        return result
-            # assignment[var].remove(value)
-            del assignment[var]
-            # remove inferences from assignment
+        for value in assignment[var]:
+            assignment_copy = copy.deepcopy(assignment)
+            assignment_copy[var] = [value]
+            inferences = self.inference(assignment, self.get_all_arcs())
+            # inferences = self.inference(assignment, self.get_all_neighboring_arcs(var))
+            if inferences:
+                result = self.backtrack(assignment_copy)
+                if result:
+                    return result
         return False
-
-    def is_assignment_complete(self, assignment):
-        for a in assignment:
-            if len(a) != 1:
-                return False
-        return True
-
-    def order_domain_values(self, var, assignment):
-        return assignment[var]
 
     def select_unassigned_variable(self, assignment):
         """The function 'Select-Unassigned-Variable' from the pseudocode
@@ -145,29 +135,9 @@ class CSP:
         of legal values has a length greater than one.
         """
         for domain in assignment:
-            if len(domain) > 1:
+            if len(assignment[domain]) > 1:
                 return domain
         return False
-
-    def select_minimum_remaining_value(self, assignment):
-        """Select the variable with the fewest remaining legal values.
-        Variables with the smallest domain.
-        """
-        minimum_value = {}
-
-        for domain in assignment:
-            if not minimum_value or len(domain) < len(minimum_value):
-                minimum_value = domain
-        return minimum_value
-
-    def is_consistent(self, assignment, var, value):
-        neighbors = self.get_all_neighboring_arcs(var)
-
-        for neighbor in neighbors:
-            neighbor_domains = assignment[neighbor[0]]
-            if len(neighbor_domains) == 1 and value in neighbor_domains:
-                return False
-        return True
 
     def inference(self, assignment, queue):
         """The function 'AC-3' from the pseudocode in the textbook.
@@ -180,9 +150,9 @@ class CSP:
             if self.revise(assignment, i, j):
                 if not assignment[i]:
                     return False  # inconsistency is found
-                neighbors = self.get_all_neighboring_arcs(i)
-                for k in neighbors:
-                    if k[0] != j:
+                for k in self.get_all_neighboring_arcs(i):
+                    # if k[0] != j:
+                    if k[0] not in queue:
                         queue.append((k[0], i))
         return True
 
@@ -269,7 +239,16 @@ def print_sudoku_solution(solution):
             print '------+-------+------'
 
 
-# csp = create_sudoku_csp('boards/easy.txt')
-csp = create_map_coloring_csp()
-wat = csp.backtracking_search()
-print wat
+start = time.time()
+csp = create_sudoku_csp('boards/medium.txt')
+# csp = create_map_coloring_csp()
+solution = csp.backtracking_search()
+
+if solution:
+    print_sudoku_solution(solution)
+else:
+    print solution
+
+end = time.time()
+
+print 'Running time: ', (end - start)
